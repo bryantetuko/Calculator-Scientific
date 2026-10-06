@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkulator Scientific</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 24px 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 72% 12%, #26190f 0%, #110d09 48%, #060504 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif;
+  }
+
+  /* bodi kalkulator */
+  .calc {
+    width: 392px; padding: 20px 20px 22px; border-radius: 32px;
+    background: linear-gradient(160deg, #171717 0%, #0c0c0c 100%);
+    border: 1px solid rgba(255,255,255,.07);
+    box-shadow: 0 26px 55px rgba(0,0,0,.7);
+  }
+
+  /* layar — sengaja beda warna dari bodi */
+  .screen {
+    background: #2b1c12; border: 1px solid #40291a; border-radius: 18px;
+    min-height: 148px; padding: 12px 14px; margin-bottom: 18px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    text-align: right; overflow: hidden;
+  }
+  .hist {
+    color: #8d7462; font-size: 14px; line-height: 1.55;
+    white-space: pre-line; overflow: hidden;
+  }
+  .expr {
+    color: #d9c6b4; font-size: 17px; height: 24px;
+    overflow: hidden; white-space: nowrap; letter-spacing: .2px;
+  }
+  .out {
+    color: #ffffff; font-size: 40px; font-weight: 700; line-height: 1.12;
+    overflow: hidden; white-space: nowrap; letter-spacing: -.6px;
+  }
+
+  /* keypad: grid 30 kolom supaya blok fungsi (6) dan blok angka (5) sejajar */
+  .keys { display: grid; grid-template-columns: repeat(30, 1fr); row-gap: 10px; }
+  button {
+    aspect-ratio: 1; border-radius: 50%; border: 0; padding: 0;
+    margin: 0 4.5px; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+    transition: filter .12s, transform .08s;
+  }
+  button:hover { filter: brightness(1.16); }
+  button:active { transform: scale(.93); }
+
+  /* angka — lingkaran abu gelap, tanpa shadow */
+  .num {
+    background: #2e2e2e;
+    color: #f5f5f5; font-size: 22px; font-weight: 500;
+  }
+  /* operator — lingkaran oranye, tanpa shadow */
+  .op, .eq, .ac {
+    background: #f2703a; color: #fff;
+  }
+  .op { font-size: 22px; }
+  .ac { font-size: 15px; letter-spacing: .5px; }
+  .eq { font-size: 24px; }
+  /* fungsi scientific — hampir hitam, teks oranye redup */
+  .fn {
+    background: #1e1e1e; color: #e0946a; font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="calc">
+  <div class="screen">
+    <div class="hist" id="hist"></div>
+    <div class="expr" id="expr"></div>
+    <div class="out" id="out">0</div>
+  </div>
+  <div class="keys" id="keys"></div>
+</div>
+
+<script>
+// span 5 = blok fungsi (6 kolom), span 6 = blok angka (5 kolom)
+const layout = [
+  ['DEG','fn',5],  ['(','fn',5],    [')','fn',5],    ['%','fn',5],    ['x!','fn',5],   ['π','fn',5],
+  ['sin','fn',5],  ['cos','fn',5],  ['tan','fn',5],  ['sinh','fn',5], ['cosh','fn',5], ['tanh','fn',5],
+  ['ln','fn',5],   ['log','fn',5],  ['√','fn',5],    ['x²','fn',5],   ['x⁻¹','fn',5],  ['e','fn',5],
+  ['7','num',6],   ['8','num',6],   ['9','num',6],   ['⌫','op',6],    ['AC','ac',6],
+  ['4','num',6],   ['5','num',6],   ['6','num',6],   ['×','op',6],    ['÷','op',6],
+  ['1','num',6],   ['2','num',6],   ['3','num',6],   ['+','op',6],    ['−','op',6],
+  ['0','num',6],   ['.','num',6],   ['ANS','num',6], ['^','op',6],    ['=','eq',6],
+];
+
+const outEl  = document.getElementById('out');
+const exprEl = document.getElementById('expr');
+const histEl = document.getElementById('hist');
+const keysEl = document.getElementById('keys');
+
+const BINOPS = ['+','−','×','÷','^'];
+const FUNCS  = ['sin','cos','tan','sinh','cosh','tanh','ln','log','√'];
+
+let tokens = [];
+let ans = 0;
+let angle = 'DEG';
+let justEvaluated = false;
+let shownResult = '0';
+let history = [];
+let modeBtn = null;
+
+const isNum  = t => /^-?\d+(\.\d*)?$/.test(t);
+const isFunc = t => FUNCS.includes(t);
+
+/* ---------- konversi sudut ---------- */
+const toRad   = x => angle === 'DEG' ? x * Math.PI / 180 : x;
+const fromRad = x => angle === 'DEG' ? x * 180 / Math.PI : x;
+
+function factorial(n) {
+  if (!Number.isInteger(n) || n < 0 || n > 170) return NaN;
+  let r = 1;
+  for (let i = 2; i <= n; i++) r *= i;
+  return r;
+}
+
+function applyFunc(name, x) {
+  switch (name) {
+    case 'sin': return Math.sin(toRad(x));
+    case 'cos': return Math.cos(toRad(x));
+    case 'tan':
+      if (angle === 'DEG' && Math.abs(((x % 180) + 180) % 180 - 90) < 1e-9) return Infinity;
+      return Math.tan(toRad(x));
+    case 'sinh': return Math.sinh(x);
+    case 'cosh': return Math.cosh(x);
+    case 'tanh': return Math.tanh(x);
+    case 'ln':   return Math.log(x);
+    case 'log':  return Math.log10(x);
+    case 'sqrt': return Math.sqrt(x);
+  }
+  return NaN;
+}
+
+/* ---------- tokenisasi ---------- */
+function normalize(toks) {
+  const out = [];
+  for (const t of toks) {
+    if (t === 'π') out.push({ k:'num', v: Math.PI });
+    else if (t === 'e') out.push({ k:'num', v: Math.E });
+    else if (t === 'ANS') out.push({ k:'num', v: ans });
+    else if (isNum(t)) {
+      if (t.startsWith('-')) { out.push({ k:'op', v:'u-' }); out.push({ k:'num', v: parseFloat(t.slice(1)) }); }
+      else out.push({ k:'num', v: parseFloat(t) });
+    }
+    else if (t === '−') out.push({ k:'op', v:'-' });
+    else if (t === '×') out.push({ k:'op', v:'*' });
+    else if (t === '÷') out.push({ k:'op', v:'/' });
+    else if (t === '+') out.push({ k:'op', v:'+' });
+    else if (t === '^') out.push({ k:'op', v:'^' });
+    else if (t === '√') out.push({ k:'func', v:'sqrt' });
+    else if (isFunc(t)) out.push({ k:'func', v:t });
+    else if (t === '!') out.push({ k:'post', v:'!' });
+    else if (t === 'x⁻¹') out.push({ k:'post', v:'inv' });
+    else if (t === '%') out.push({ k:'post', v:'%' });
+    else if (t === '(') out.push({ k:'lp' });
+    else if (t === ')') out.push({ k:'rp' });
+  }
+
+  // perkalian implisit: 2π, 3(4+5), 2sin(30)
+  const res = [];
+  for (const cur of out) {
+    const prev = res[res.length - 1];
+    const prevEnd = prev && (prev.k === 'num' || prev.k === 'rp' || prev.k === 'post');
+    const curStart = cur.k === 'num' || cur.k === 'lp' || cur.k === 'func';
+    if (prevEnd && curStart) res.push({ k:'op', v:'*' });
+    res.push(cur);
+  }
+
+  // minus uner
+  for (let i = 0; i < res.length; i++) {
+    if (res[i].k === 'op' && res[i].v === '-') {
+      const p = res[i-1];
+      if (!p || p.k === 'op' || p.k === 'lp' || p.k === 'func') res[i].v = 'u-';
+    }
+  }
+  return res;
+}
+
+/* ---------- shunting-yard ---------- */
+const PREC  = { '+':1, '-':1, '*':2, '/':2, 'u-':3, '^':4 };
+const RIGHT = { '^':true, 'u-':true };
+
+function toRPN(toks) {
+  const out = [], ops = [];
+  for (const t of toks) {
+    if (t.k === 'num') out.push(t);
+    else if (t.k === 'func') ops.push(t);
+    else if (t.k === 'post') out.push(t);
+    else if (t.k === 'op') {
+      // operator prefix (unary minus) selalu langsung di-push: 2^-1 = 2^(-1), -2^2 = -(2^2)
+      if (t.v !== 'u-') {
+        while (ops.length) {
+          const top = ops[ops.length - 1];
+          if (top.k === 'lp' || top.k === 'func') break;
+          const p = PREC[top.v], c = PREC[t.v];
+          if (p > c || (p === c && !RIGHT[t.v])) out.push(ops.pop());
+          else break;
+        }
+      }
+      ops.push(t);
+    }
+    else if (t.k === 'lp') ops.push(t);
+    else if (t.k === 'rp') {
+      while (ops.length && ops[ops.length - 1].k !== 'lp') out.push(ops.pop());
+      if (ops.length) ops.pop();
+      if (ops.length && ops[ops.length - 1].k === 'func') out.push(ops.pop());
+    }
+  }
+  while (ops.length) {
+    const top = ops.pop();
+    if (top.k === 'lp') throw new Error('kurung tidak seimbang');
+    out.push(top);
+  }
+  return out;
+}
+
+function evalRPN(rpn) {
+  const st = [];
+  for (const t of rpn) {
+    if (t.k === 'num') { st.push(t.v); continue; }
+    if (t.k === 'post') {
+      const a = st.pop();
+      if (a === undefined) throw new Error('operand kurang');
+      st.push(t.v === '!' ? factorial(a) : t.v === 'inv' ? 1 / a : a / 100);
+      continue;
+    }
+    if (t.k === 'func') {
+      const a = st.pop();
+      if (a === undefined) throw new Error('operand kurang');
+      st.push(applyFunc(t.v, a));
+      continue;
+    }
+    if (t.v === 'u-') {
+      const a = st.pop();
+      if (a === undefined) throw new Error('operand kurang');
+      st.push(-a);
+      continue;
+    }
+    const b = st.pop(), a = st.pop();
+    if (a === undefined || b === undefined) throw new Error('operand kurang');
+    switch (t.v) {
+      case '+': st.push(a + b); break;
+      case '-': st.push(a - b); break;
+      case '*': st.push(a * b); break;
+      case '/': st.push(a / b); break;
+      case '^': st.push(Math.pow(a, b)); break;
+    }
+  }
+  if (st.length !== 1) throw new Error('ekspresi tidak valid');
+  return st[0];
+}
+
+/* ---------- evaluasi + format ---------- */
+function autoClose(toks) {
+  let depth = 0;
+  for (const t of toks) {
+    if (t === '(') depth++;
+    else if (t === ')') depth--;
+  }
+  const out = toks.slice();
+  for (let i = 0; i < depth; i++) out.push(')');
+  return out;
+}
+
+function tryEval(toks) {
+  try {
+    const n = normalize(autoClose(toks));
+    if (n.length === 0) return 0;
+    const r = evalRPN(toRPN(n));
+    if (typeof r !== 'number' || !isFinite(r)) return null;
+    return r;
+  } catch (e) { return null; }
+}
+
+function fmt(n) {
+  if (typeof n !== 'number' || !isFinite(n)) return 'Error';
+  if (n === 0) return '0';
+  const r = parseFloat(n.toPrecision(12));
+  const a = Math.abs(r);
+  if (a >= 1e12 || a < 1e-9) return r.toExponential(6).replace(/\.?0+e/, 'e');
+  return String(r);
+}
+
+/* ---------- input ---------- */
+function inputDigit(d) {
+  if (justEvaluated) { tokens = []; justEvaluated = false; }
+  const last = tokens[tokens.length - 1];
+  if (last !== undefined && isNum(last)) {
+    if (last === '0') tokens[tokens.length - 1] = d;
+    else if (last === '-0') tokens[tokens.length - 1] = '-' + d;
+    else tokens[tokens.length - 1] = last + d;
+  } else tokens.push(d);
+  const l2 = tokens[tokens.length - 1];
+  if (isNum(l2) && l2.length > 16) tokens[tokens.length - 1] = l2.slice(0, 16);
+}
+
+function inputDot() {
+  if (justEvaluated) { tokens = []; justEvaluated = false; }
+  const last = tokens[tokens.length - 1];
+  if (last !== undefined && isNum(last)) {
+    if (!last.includes('.')) tokens[tokens.length - 1] = last + '.';
+  } else tokens.push('0.');
+}
+
+function push(t) {
+  if (justEvaluated) {
+    const cont = ['+','−','×','÷','^','!','%','x⁻¹'].includes(t);
+    if (!cont) tokens = [];
+    justEvaluated = false;
+  }
+  tokens.push(t);
+}
+
+function toggleSign() {
+  const last = tokens[tokens.length - 1];
+  if (last !== undefined && isNum(last)) {
+    tokens[tokens.length - 1] = last.startsWith('-') ? last.slice(1) : '-' + last;
+  } else push('−');
+}
+
+function backspace() {
+  if (justEvaluated) { justEvaluated = false; return; }
+  if (!tokens.length) return;
+  const last = tokens[tokens.length - 1];
+  if (isNum(last) && last.length > 1) {
+    const s = last.slice(0, -1);
+    if (s === '-' || s === '') tokens.pop();
+    else tokens[tokens.length - 1] = s;
+  } else tokens.pop();
+}
+
+function equals() {
+  if (!tokens.length) return;
+  const v = tryEval(tokens);
+  history.push(displayTokens(tokens));
+  if (history.length > 2) history.shift();
+  if (v === null) {
+    shownResult = 'Error';
+    tokens = [];
+  } else {
+    ans = v;
+    shownResult = fmt(v);
+    tokens = [shownResult];
+  }
+  justEvaluated = true;
+}
+
+/* ---------- tampilan ---------- */
+function displayTokens(toks) {
+  let s = '';
+  toks.forEach((t, i) => {
+    const prev = toks[i - 1];
+    if (t === '+' || t === '×' || t === '÷' || t === '^') {
+      s += (s ? ' ' : '') + t + ' ';
+    } else if (t === '−') {
+      const unary = !prev || prev === '(' || BINOPS.includes(prev) || FUNCS.includes(prev);
+      s += unary ? '−' : ' − ';
+    } else {
+      s += t;
+    }
+  });
+  return s.trim();
+}
+
+function render() {
+  if (modeBtn) modeBtn.textContent = angle;
+  histEl.textContent = history.join('\n');
+  if (justEvaluated) {
+    exprEl.textContent = '';
+    outEl.textContent = shownResult === 'Error' ? 'Error' : '= ' + shownResult;
+    return;
+  }
+  exprEl.textContent = displayTokens(tokens);
+  if (!tokens.length) { outEl.textContent = '0'; return; }
+  const v = tryEval(tokens);
+  outEl.textContent = v === null ? '' : '= ' + fmt(v);
+}
+
+/* ---------- tombol ---------- */
+for (const [label, cls, span] of layout) {
+  const b = document.createElement('button');
+  b.textContent = label;
+  if (cls) b.className = cls;
+  if (span) b.style.gridColumn = 'span ' + span;
+  b.dataset.label = label;
+  b.addEventListener('click', () => press(label));
+  if (label === 'DEG') modeBtn = b;
+  keysEl.appendChild(b);
+}
+
+function press(label) {
+  switch (label) {
+    case 'AC': tokens = []; justEvaluated = false; break;
+    case '⌫': backspace(); break;
+    case 'DEG': angle = angle === 'DEG' ? 'RAD' : 'DEG'; break;
+    case 'x²': push('^'); push('2'); break;
+    case 'x!': push('!'); break;
+    case 'x⁻¹': push('x⁻¹'); break;
+    case '±': toggleSign(); break;
+    case 'ANS': push('ANS'); break;
+    case '=': equals(); break;
+    case 'sin': case 'cos': case 'tan':
+    case 'sinh': case 'cosh': case 'tanh':
+    case 'ln': case 'log': case '√':
+      push(label); push('('); break;
+    case 'π': case 'e': case '(': case ')':
+    case '+': case '−': case '×': case '÷': case '^': case '%':
+      push(label); break;
+    case '.': inputDot(); break;
+    default:
+      if (/^[0-9]$/.test(label)) inputDigit(label);
+  }
+  render();
+}
+
+window.__calc = {
+  press,
+  state: () => ({ tokens: tokens.slice(), ans, angle, justEvaluated }),
+};
+
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  if (/^[0-9]$/.test(k)) press(k);
+  else if (k === '.') press('.');
+  else if (k === '+') press('+');
+  else if (k === '-') press('−');
+  else if (k === '*') press('×');
+  else if (k === '/') press('÷');
+  else if (k === '^') press('^');
+  else if (k === '(') press('(');
+  else if (k === ')') press(')');
+  else if (k === '!') press('x!');
+  else if (k === '%') press('%');
+  else if (k === 'Enter' || k === '=') press('=');
+  else if (k === 'Backspace') press('⌫');
+  else if (k === 'Escape') press('AC');
+  else return;
+  e.preventDefault();
+});
+
+render();
+</script>
+</body>
+</html>

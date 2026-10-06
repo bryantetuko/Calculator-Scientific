@@ -1,0 +1,39 @@
+127.0.0.1 - - [07/Oct/2026 00:33:10] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:33:10] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:33:14] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:33:16] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:33:16] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 00:33:20] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:33:22] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:33:22] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 00:37:01] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:37:01] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:37:38] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:40:03] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:40:03] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:41:16] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:41:16] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:41:16] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 00:49:13] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:49:13] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:49:13] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 00:51:22] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:51:22] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:51:22] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 00:52:50] "GET /_demo.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:52:50] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:52:50] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 00:53:27] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:53:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 00:53:37] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 00:53:37] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 01:02:29] "GET /_demo.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 01:02:29] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 01:02:29] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 01:03:03] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 01:03:03] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 01:07:17] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 01:07:17] code 404, message File not found
+127.0.0.1 - - [07/Oct/2026 01:07:17] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [07/Oct/2026 01:07:36] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [07/Oct/2026 01:07:37] "GET /index.html HTTP/1.1" 200 -
